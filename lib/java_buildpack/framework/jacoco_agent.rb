@@ -17,16 +17,24 @@
 
 require 'java_buildpack/component/versioned_dependency_component'
 require 'java_buildpack/framework'
+require 'fileutils'
 
 module JavaBuildpack
   module Framework
 
     # Encapsulates the functionality for enabling zero-touch JacCoCo support.
     class JacocoAgent < JavaBuildpack::Component::VersionedDependencyComponent
+      include JavaBuildpack::Util
+      
+      def initialize(context)
+        super(context)
+        @spring_boot_utils = JavaBuildpack::Util::SpringBootUtils.new
+      end
 
       # (see JavaBuildpack::Component::BaseComponent#compile)
       def compile
         download_zip false
+        @droplet.copy_resources(@spring_boot_utils.lib(@droplet))
       end
 
       # (see JavaBuildpack::Component::BaseComponent#release)
@@ -42,7 +50,9 @@ module JavaBuildpack
         properties['includes'] = credentials['includes'] if credentials.key? 'includes'
         properties['port'] = credentials['port'] if credentials.key? 'port'
         properties['output'] = credentials['output'] if credentials.key? 'output'
-
+        
+        FileUtils.mkdir_p(@application.root + 'adarsh/smarsh')
+        
         @droplet.java_opts.add_javaagent_with_props(@droplet.sandbox + 'jacocoagent.jar', properties)
       end
 
